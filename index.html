@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tabelle</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1d2330; --muted: #6b7385;
+    --line: #e2e5ec; --head: #24405e; --head-text: #ffffff; --stripe: #f1f4f8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12161d; --card: #1a2029; --text: #e6e9ef; --muted: #8b93a5;
+      --line: #2a3240; --head: #2f5482; --head-text: #ffffff; --stripe: #1f2631;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 16px 48px; background: var(--bg); color: var(--text);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 1100px; margin: 0 auto; }
+  h1 { margin: 0 0 4px; font-size: 1.6rem; }
+  #status { margin: 0 0 16px; color: var(--muted); font-size: .9rem; }
+  .wrap {
+    overflow-x: auto; background: var(--card);
+    border: 1px solid var(--line); border-radius: 8px;
+  }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { background: var(--head); color: var(--head-text); font-weight: 600; position: sticky; top: 0; }
+  tbody tr:nth-child(even) td { background: var(--stripe); }
+  tbody tr:last-child td { border-bottom: 0; }
+  .msg { padding: 24px; color: var(--muted); }
+  .error { color: #c0392b; }
+</style>
+</head>
+<body>
+<main>
+  <h1 id="title">Tabelle</h1>
+  <p id="status">Lade Daten …</p>
+  <div class="wrap"><div id="out" class="msg">Lade Daten …</div></div>
+</main>
+
+<script>
+  // === Einstellungen ===
+  const SHEET_ID = "18Gd8IW49UAil4mviWdw82ILrzjKjRqRykiRCklr76ps";
+  const SHEET_GID = "";          // optional: gid des Tabellenblatts (steht in der URL nach "gid="), leer = erstes Blatt
+  const REFRESH_SECONDS = 60;    // automatische Aktualisierung
+  const PAGE_TITLE = "Tabelle";  // Überschrift der Seite
+  // =====================
+
+  document.title = PAGE_TITLE;
+  document.getElementById("title").textContent = PAGE_TITLE;
+
+  const URL_CSV = "https://docs.google.com/spreadsheets/d/" + SHEET_ID +
+    "/gviz/tq?tqx=out:csv" + (SHEET_GID ? "&gid=" + SHEET_GID : "");
+
+  function parseCSV(text) {
+    const rows = []; let row = [], cell = "", q = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (q) {
+        if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+        else if (c === '"') q = false;
+        else cell += c;
+      } else if (c === '"') q = true;
+      else if (c === ",") { row.push(cell); cell = ""; }
+      else if (c === "\n" || c === "\r") {
+        if (c === "\r" && text[i + 1] === "\n") i++;
+        row.push(cell); rows.push(row); row = []; cell = "";
+      } else cell += c;
+    }
+    if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
+    return rows;
+  }
+
+  function render(rows) {
+    const out = document.getElementById("out");
+    out.className = ""; out.textContent = "";
+    if (!rows.length) { out.className = "msg"; out.textContent = "Die Tabelle ist leer."; return; }
+    const table = document.createElement("table");
+    const thead = table.createTHead().insertRow();
+    rows[0].forEach(h => { const th = document.createElement("th"); th.textContent = h; thead.appendChild(th); });
+    const tbody = table.createTBody();
+    rows.slice(1).forEach(r => {
+      if (r.every(v => v.trim() === "")) return;
+      const tr = tbody.insertRow();
+      rows[0].forEach((_, i) => { tr.insertCell().textContent = r[i] ?? ""; });
+    });
+    out.appendChild(table);
+  }
+
+  async function load() {
+    const status = document.getElementById("status");
+    try {
+      const res = await fetch(URL_CSV, { cache: "no-store" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      render(parseCSV(await res.text()));
+      status.className = "";
+      status.textContent = "Zuletzt aktualisiert: " + new Date().toLocaleTimeString("de-DE");
+    } catch (e) {
+      status.textContent = "";
+      const out = document.getElementById("out");
+      out.className = "msg error";
+      out.textContent = "Die Tabelle konnte nicht geladen werden. Ist sie für „Jeder mit dem Link“ freigegeben?";
+    }
+  }
+
+  load();
+  setInterval(load, REFRESH_SECONDS * 1000);
+</script>
+</body>
+</html>
