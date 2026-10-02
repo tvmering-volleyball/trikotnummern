@@ -35,6 +35,7 @@
   tbody tr.damen td { background: #ead1dc; }
   tbody tr.herren2 td { background: #d9ead3; }
   tbody tr.herren1 td { background: #cfe2f3; }
+  tbody tr.jugend td { background: #fff2cc; }
   tbody tr:last-child td { border-bottom: 0; }
   .msg { padding: 24px; color: var(--muted); }
   .error { color: #c0392b; }
@@ -58,8 +59,26 @@
   document.title = PAGE_TITLE;
   document.getElementById("title").textContent = PAGE_TITLE;
 
-  const URL_CSV = "https://docs.google.com/spreadsheets/d/" + SHEET_ID +
-    "/gviz/tq?tqx=out:csv" + (SHEET_GID ? "&gid=" + SHEET_GID : "");
+  const BASE = "https://docs.google.com/spreadsheets/d/" + SHEET_ID;
+  const GID = SHEET_GID ? "&gid=" + SHEET_GID : "";
+  // 1. Export liefert alle Zellen unverändert (auch Text wie "--" in Zahlenspalten)
+  // 2. gviz dient als Fallback, kann aber Text in Zahlenspalten weglassen
+  const URLS = [
+    BASE + "/export?format=csv" + GID,
+    BASE + "/gviz/tq?tqx=out:csv" + GID
+  ];
+
+  async function fetchCSV() {
+    let lastErr;
+    for (const u of URLS) {
+      try {
+        const res = await fetch(u, { cache: "no-store" });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return await res.text();
+      } catch (e) { lastErr = e; }
+    }
+    throw lastErr;
+  }
 
   function parseCSV(text) {
     const rows = []; let row = [], cell = "", q = false;
@@ -89,7 +108,7 @@
     rows[0].forEach(h => { const th = document.createElement("th"); th.textContent = h; thead.appendChild(th); });
     const tbody = table.createTBody();
     const teamCol = rows[0].findIndex(h => h.trim().toLowerCase() === "team");
-    const teamClass = { "damen": "damen", "herren 2": "herren2", "herren 1": "herren1" };
+    const teamClass = { "damen": "damen", "herren 2": "herren2", "herren 1": "herren1", "jugend": "jugend" };
     rows.slice(1).forEach(r => {
       if (r.every(v => v.trim() === "")) return;
       const tr = tbody.insertRow();
@@ -105,9 +124,7 @@
   async function load() {
     const status = document.getElementById("status");
     try {
-      const res = await fetch(URL_CSV, { cache: "no-store" });
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      render(parseCSV(await res.text()));
+      render(parseCSV(await fetchCSV()));
       status.className = "";
       status.textContent = "Zuletzt aktualisiert: " + new Date().toLocaleTimeString("de-DE");
     } catch (e) {
