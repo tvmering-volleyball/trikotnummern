@@ -36,8 +36,9 @@
   tbody tr.herren2 td { background: #d9ead3; }
   tbody tr.herren1 td { background: #cfe2f3; }
   tbody tr.jugend td { background: #fff2cc; }
+  tbody tr.hobby td { background: #d9d2e9; }
   tbody tr.frei td { background: #ffffff; }
-  tbody tr.sektion td { font-weight: 700; }
+  tbody tr.sektion td { background: #ffffff; font-weight: 700; }
   tbody tr:last-child td { border-bottom: 0; }
   .msg { padding: 24px; color: var(--muted); }
   .error { color: #c0392b; }
@@ -110,7 +111,7 @@
     rows[0].forEach(h => { const th = document.createElement("th"); th.textContent = h; thead.appendChild(th); });
     const tbody = table.createTBody();
     const teamCol = rows[0].findIndex(h => h.trim().toLowerCase() === "team");
-    const teamClass = { "damen": "damen", "herren 2": "herren2", "herren 1": "herren1", "jugend": "jugend" };
+    const teamClass = { "damen": "damen", "herren 2": "herren2", "herren 1": "herren1", "jugend": "jugend", "hobby": "hobby" };
     rows.slice(1).forEach(r => {
       if (r.every(v => v.trim() === "")) return;
       const tr = tbody.insertRow();
@@ -125,8 +126,7 @@
       // Sektionsüberschrift: alle Spalten haben denselben Inhalt -> eine Zelle über die ganze Breite, fett
       const vals = rows[0].map((_, i) => (r[i] ?? "").trim());
       if (vals.length > 1 && vals[0] !== "" && vals.every(v => v === vals[0])) {
-        const cls = teamClass[vals[0].toLowerCase()];
-        tr.className = "sektion" + (cls ? " " + cls : "");
+        tr.className = "sektion";
         const td = tr.insertCell();
         td.colSpan = vals.length;
         td.textContent = vals[0];
