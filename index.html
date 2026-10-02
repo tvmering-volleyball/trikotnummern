@@ -36,6 +36,8 @@
   tbody tr.herren2 td { background: #d9ead3; }
   tbody tr.herren1 td { background: #cfe2f3; }
   tbody tr.jugend td { background: #fff2cc; }
+  tbody tr.frei td { background: #ffffff; }
+  tbody tr.sektion td { font-weight: 700; }
   tbody tr:last-child td { border-bottom: 0; }
   .msg { padding: 24px; color: var(--muted); }
   .error { color: #c0392b; }
@@ -112,6 +114,24 @@
     rows.slice(1).forEach(r => {
       if (r.every(v => v.trim() === "")) return;
       const tr = tbody.insertRow();
+      // Freie Zeile: "--" in der Team-Spalte -> eine große weiße Zelle über die ganze Breite
+      if (teamCol >= 0 && (r[teamCol] ?? "").trim() === "--") {
+        tr.className = "frei";
+        const td = tr.insertCell();
+        td.colSpan = rows[0].length;
+        td.textContent = "\u00a0";
+        return;
+      }
+      // Sektionsüberschrift: alle Spalten haben denselben Inhalt -> eine Zelle über die ganze Breite, fett
+      const vals = rows[0].map((_, i) => (r[i] ?? "").trim());
+      if (vals.length > 1 && vals[0] !== "" && vals.every(v => v === vals[0])) {
+        const cls = teamClass[vals[0].toLowerCase()];
+        tr.className = "sektion" + (cls ? " " + cls : "");
+        const td = tr.insertCell();
+        td.colSpan = vals.length;
+        td.textContent = vals[0];
+        return;
+      }
       if (teamCol >= 0) {
         const cls = teamClass[(r[teamCol] ?? "").trim().toLowerCase()];
         if (cls) tr.className = cls;
